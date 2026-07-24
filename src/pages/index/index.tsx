@@ -31,26 +31,75 @@ const IndexPage = () => {
       const uploadedUrls: string[] = [];
       const totalFiles = res.tempFilePaths.length;
 
+      // 检测平台
+      const isH5 = Taro.getEnv() === Taro.ENV_TYPE.WEB;
+
+      console.log('平台检测:', isH5 ? 'H5' : '小程序');
+      console.log('选择的图片:', res);
+
       // 逐个上传图片
       for (let i = 0; i < res.tempFilePaths.length; i++) {
         try {
-          const uploadRes = await Network.uploadFile({
-            url: '/api/images/upload',
-            filePath: res.tempFilePaths[i],
-            name: 'file',
-          });
+          let imageUrl: string | null = null;
 
-          console.log('上传结果:', uploadRes);
+          if (isH5) {
+            // H5 端：直接使用 fetch 上传
+            // H5 端的 tempFiles 包含 File 对象
+            const file = res.tempFiles?.[i];
+            console.log('H5 文件对象:', file);
 
-          // 解析响应数据
-          const data = uploadRes.data;
-          if (typeof data === 'string') {
-            const parsed = JSON.parse(data);
-            if (parsed.code === 200 && parsed.data?.url) {
-              uploadedUrls.push(parsed.data.url);
+            if (file) {
+              // 创建 FormData
+              const formData = new FormData();
+              // H5 端的 tempFiles 可能是 File 对象
+              const fileObj = (file as any).originalFileObj || file;
+              formData.append('file', fileObj);
+
+              // 使用 fetch 上传
+              const response = await fetch(`${PROJECT_DOMAIN}/api/images/upload`, {
+                method: 'POST',
+                body: formData,
+              });
+
+              console.log('H5 上传响应:', response.status);
+
+              if (response.ok) {
+                const result = await response.json();
+                console.log('H5 上传结果:', result);
+
+                if (result.code === 200 && result.data?.url) {
+                  imageUrl = result.data.url;
+                }
+              } else {
+                throw new Error(`上传失败: ${response.status}`);
+              }
             }
-          } else if (data && data.code === 200 && data.data?.url) {
-            uploadedUrls.push(data.data.url);
+          } else {
+            // 小程序端：使用 Network.uploadFile
+            const uploadRes = await Network.uploadFile({
+              url: '/api/images/upload',
+              filePath: res.tempFilePaths[i],
+              name: 'file',
+            });
+
+            console.log('小程序上传结果:', uploadRes);
+
+            // 解析响应数据
+            const data = uploadRes.data as any;
+            if (typeof data === 'string') {
+              const parsed = JSON.parse(data);
+              if (parsed.code === 200 && parsed.data?.url) {
+                imageUrl = parsed.data.url;
+              }
+            } else if (data && data.code === 200 && data.data?.url) {
+              imageUrl = data.data.url;
+            }
+          }
+
+          if (imageUrl) {
+            uploadedUrls.push(imageUrl);
+          } else {
+            console.error('上传成功但未获取到 URL');
           }
 
           // 更新进度
@@ -70,6 +119,11 @@ const IndexPage = () => {
         Taro.showToast({
           title: `成功上传 ${uploadedUrls.length} 张图片`,
           icon: 'success',
+        });
+      } else {
+        Taro.showToast({
+          title: '所有图片上传失败',
+          icon: 'none',
         });
       }
     } catch (err) {
@@ -117,39 +171,64 @@ const IndexPage = () => {
       console.log('PDF生成结果:', res.data);
 
       // 解析响应
-      const data = res.data;
+      const data = res.data as any;
       if (data && data.code === 200 && data.data?.downloadUrl) {
         const downloadUrl = data.data.downloadUrl;
 
-        // 下载 PDF
-        Taro.showLoading({ title: '正在下载PDF...' });
-        const downloadRes = await Network.downloadFile({
-          url: downloadUrl,
-        });
+        // 检测平台
+        const isH5 = Taro.getEnv() === Taro.ENV_TYPE.WEB;
 
-        if (downloadRes.statusCode === 200) {
-          // 保存文件到本地
-          const filePath = downloadRes.tempFilePath;
+        if (isH5) {
+          // H5 端：使用 fetch + blob 下载
+          Taro.showLoading({ title: '正在下载PDF...' });
           
-          // 尝试打开文档（小程序）
           try {
-            await Taro.openDocument({
-              filePath: filePath,
-              fileType: 'pdf',
-            });
-            Taro.showToast({
-              title: 'PDF已下载',
-              icon: 'success',
-            });
-          } catch (err) {
-            // H5端不支持 openDocument，直接提示下载成功
+            const response = await fetch(downloadUrl);
+            if (!response.ok) {
+              throw new Error('下载失败');
+            }
+            
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = `images_${Date.now()}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+            
             Taro.showToast({
               title: 'PDF下载成功',
               icon: 'success',
             });
+          } catch (err) {
+            console.error('H5 下载失败:', err);
+            throw new Error('下载失败，请重试');
           }
         } else {
-          throw new Error('下载失败');
+          // 小程序端：使用 Network.downloadFile
+          Taro.showLoading({ title: '正在下载PDF...' });
+          const downloadRes = await Network.downloadFile({
+            url: downloadUrl,
+          });
+
+          if (downloadRes.statusCode === 200) {
+            const filePath = downloadRes.tempFilePath;
+
+            // 打开文档
+            await Taro.openDocument({
+              filePath: filePath,
+              fileType: 'pdf',
+            });
+            
+            Taro.showToast({
+              title: 'PDF已下载',
+              icon: 'success',
+            });
+          } else {
+            throw new Error('下载失败');
+          }
         }
       } else {
         throw new Error(data?.msg || 'PDF生成失败');
