@@ -195,7 +195,11 @@ const IndexPage = () => {
             const blobUrl = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = blobUrl;
-            link.download = `images_${Date.now()}.pdf`;
+            // 使用用户输入的文件名或自动生成
+            const downloadFileName = pdfFileName
+              ? `${pdfFileName.replace(/[^\w\u4e00-\u9fa5-]/g, '_')}.pdf`
+              : `images_${Date.now()}.pdf`;
+            link.download = downloadFileName;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -260,47 +264,50 @@ const IndexPage = () => {
                 已选图片（{images.length}张）
               </Text>
 
-              <View className="flex flex-col gap-3">
-                {images.map((url, index) => (
-                  <View
-                    key={index}
-                    className="flex flex-row items-center gap-3 bg-neutral-50 rounded-lg p-3"
-                  >
-                    {/* 序号 */}
-                    <View className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
-                      <Text className="text-white text-sm font-medium">
-                        {index + 1}
-                      </Text>
-                    </View>
-
-                    {/* 缩略图 */}
-                    <Image
-                      src={url}
-                      className="w-16 h-16 rounded-lg object-cover"
-                      mode="aspectFill"
-                    />
-
-                    {/* 图片信息 */}
-                    <View className="flex-1 flex flex-col">
-                      <Text className="block text-sm font-medium text-neutral-900">
-                        图片 {index + 1}
-                      </Text>
-                      <Text className="block text-xs text-neutral-500 mt-1">
-                        点击删除按钮可移除
-                      </Text>
-                    </View>
-
-                    {/* 删除按钮 */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteImage(index)}
-                      className="text-red-500 hover:text-red-600"
+              {/* 固定高度的滚动区域 */}
+              <View className="max-h-80 overflow-y-auto">
+                <View className="flex flex-col gap-3">
+                  {images.map((url, index) => (
+                    <View
+                      key={index}
+                      className="flex flex-row items-center gap-3 bg-neutral-50 rounded-lg p-3"
                     >
-                      <Trash2 size={20} color="#ef4444" />
-                    </Button>
-                  </View>
-                ))}
+                      {/* 序号 */}
+                      <View className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
+                        <Text className="text-white text-sm font-medium">
+                          {index + 1}
+                        </Text>
+                      </View>
+
+                      {/* 缩略图 */}
+                      <Image
+                        src={url}
+                        className="w-16 h-16 rounded-lg object-cover"
+                        mode="aspectFill"
+                      />
+
+                      {/* 图片信息 */}
+                      <View className="flex-1 flex flex-col">
+                        <Text className="block text-sm font-medium text-neutral-900">
+                          图片 {index + 1}
+                        </Text>
+                        <Text className="block text-xs text-neutral-500 mt-1">
+                          点击删除按钮可移除
+                        </Text>
+                      </View>
+
+                      {/* 删除按钮 */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteImage(index)}
+                        className="text-red-500 hover:text-red-600"
+                      >
+                        <Trash2 size={20} color="#ef4444" />
+                      </Button>
+                    </View>
+                  ))}
+                </View>
               </View>
             </CardContent>
           </Card>
@@ -352,24 +359,22 @@ const IndexPage = () => {
         </Card>
 
         {/* 转换按钮 */}
-        {images.length > 0 && (
-          <Card>
-            <CardContent className="p-4">
-              <Button
-                onClick={handleConvertToPdf}
-                disabled={uploading || converting || images.length === 0}
-                className="w-full bg-green-600 hover:bg-green-700 text-white"
-              >
-                <View className="flex flex-row items-center justify-center gap-2">
-                  <FileDown size={20} color="#ffffff" />
-                  <Text className="text-white font-medium">
-                    {converting ? '正在转换...' : '转换并下载 PDF'}
-                  </Text>
-                </View>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+        <Card>
+          <CardContent className="p-4">
+            <Button
+              onClick={handleConvertToPdf}
+              disabled={uploading || converting || images.length === 0}
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+            >
+              <View className="flex flex-row items-center justify-center gap-2">
+                <FileDown size={20} color="#ffffff" />
+                <Text className="text-white font-medium">
+                  {converting ? '正在转换...' : '转换并下载 PDF'}
+                </Text>
+              </View>
+            </Button>
+          </CardContent>
+        </Card>
       </View>
     </View>
   );

@@ -87,10 +87,15 @@ export class PdfService {
     // 上传 PDF 到对象存储
     const timestamp = Date.now();
     // 使用自定义文件名或自动生成
-    const safeFileName = customFileName
-      ? customFileName.replace(/[^\w\u4e00-\u9fa5-]/g, '_').substring(0, 50)
-      : `images_${timestamp}`;
-    const fileName = `pdfs/${timestamp}_${safeFileName}.pdf`;
+    let fileName: string;
+    if (customFileName) {
+      // 使用用户输入的文件名，过滤特殊字符
+      const safeFileName = customFileName.replace(/[^\w\u4e00-\u9fa5-]/g, '_').substring(0, 50);
+      fileName = `pdfs/${safeFileName}.pdf`;
+    } else {
+      // 自动生成文件名
+      fileName = `pdfs/images_${timestamp}.pdf`;
+    }
 
     const fileKey = await this.storage.uploadFile({
       fileContent: pdfBuffer,
