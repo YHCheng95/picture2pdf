@@ -1,4 +1,4 @@
-import { View, Text, Image } from '@tarojs/components';
+import { View, Text, Image, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useState } from 'react';
 import { Network } from '@/network';
@@ -276,10 +276,10 @@ const IndexPage = () => {
             </Text>
 
             {/* 可滚动的图片列表 */}
-            <View className="flex-1 relative">
+            <View className="flex-1 overflow-hidden relative">
               {images.length > 0 ? (
-                <View className="h-full overflow-y-auto">
-                  <View className="flex flex-col gap-3">
+                <ScrollView scrollY className="h-full">
+                  <View className="flex flex-col gap-3 pb-4">
                     {images.map((image, index) => (
                       <View
                         key={index}
@@ -321,7 +321,7 @@ const IndexPage = () => {
                       </View>
                     ))}
                   </View>
-                </View>
+                </ScrollView>
               ) : (
                 /* 空状态提示 - 绝对定位居中 */
                 <View className="absolute inset-0 flex items-center justify-center">
