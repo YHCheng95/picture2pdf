@@ -1,4 +1,7 @@
 name: Build Android APK
+# 添加权限配置
+permissions:
+  contents: write  # 允许创建 Release
 
 on:
   push:
