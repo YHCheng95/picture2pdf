@@ -298,12 +298,12 @@ const IndexPage = () => {
                         mode="aspectFill"
                       />
 
-                      {/* 图片信息 */}
-                      <View className="flex-1 flex flex-col">
+                      {/* 图片信息 - 固定宽度，防止挤压其他元素 */}
+                      <View className="w-32 flex flex-col min-w-0">
                         <Text className="block text-sm font-medium text-neutral-900 truncate">
                           {image.fileName}
                         </Text>
-                        <Text className="block text-xs text-neutral-500 mt-1">
+                        <Text className="block text-xs text-neutral-500 mt-1 truncate">
                           点击删除按钮可移除
                         </Text>
                       </View>
