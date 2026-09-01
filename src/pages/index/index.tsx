@@ -12,7 +12,7 @@ import { Trash2, Plus, FileDown } from 'lucide-react-taro';
  * 图片转 PDF 工具首页
  */
 const IndexPage = () => {
-  const [images, setImages] = useState<string[]>([]);
+  const [images, setImages] = useState<{ url: string; fileName: string }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [converting, setConverting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -30,7 +30,7 @@ const IndexPage = () => {
       setUploading(true);
       setUploadProgress(0);
 
-      const uploadedUrls: string[] = [];
+      const uploadedImages: { url: string; fileName: string }[] = [];
       const totalFiles = res.tempFilePaths.length;
 
       // 检测平台
@@ -43,6 +43,7 @@ const IndexPage = () => {
       for (let i = 0; i < res.tempFilePaths.length; i++) {
         try {
           let imageUrl: string | null = null;
+          let fileName = `图片${i + 1}`;
 
           if (isH5) {
             // H5 端：直接使用 fetch 上传
@@ -51,10 +52,14 @@ const IndexPage = () => {
             console.log('H5 文件对象:', file);
 
             if (file) {
+              // 获取文件名
+              const fileObj = (file as any).originalFileObj || file;
+              if (fileObj && fileObj.name) {
+                fileName = fileObj.name;
+              }
+
               // 创建 FormData
               const formData = new FormData();
-              // H5 端的 tempFiles 可能是 File 对象
-              const fileObj = (file as any).originalFileObj || file;
               formData.append('file', fileObj);
 
               // 使用 fetch 上传
@@ -78,9 +83,16 @@ const IndexPage = () => {
             }
           } else {
             // 小程序端：使用 Network.uploadFile
+            // 从 tempFilePaths 提取文件名
+            const filePath = res.tempFilePaths[i];
+            const fileNameMatch = filePath.match(/[^/\\]+$/);
+            if (fileNameMatch) {
+              fileName = fileNameMatch[0];
+            }
+
             const uploadRes = await Network.uploadFile({
               url: '/api/images/upload',
-              filePath: res.tempFilePaths[i],
+              filePath: filePath,
               name: 'file',
             });
 
@@ -99,7 +111,7 @@ const IndexPage = () => {
           }
 
           if (imageUrl) {
-            uploadedUrls.push(imageUrl);
+            uploadedImages.push({ url: imageUrl, fileName });
           } else {
             console.error('上传成功但未获取到 URL');
           }
@@ -116,10 +128,10 @@ const IndexPage = () => {
       }
 
       // 更新图片列表
-      if (uploadedUrls.length > 0) {
-        setImages([...images, ...uploadedUrls]);
+      if (uploadedImages.length > 0) {
+        setImages([...images, ...uploadedImages]);
         Taro.showToast({
-          title: `成功上传 ${uploadedUrls.length} 张图片`,
+          title: `成功上传 ${uploadedImages.length} 张图片`,
           icon: 'success',
         });
       } else {
@@ -166,7 +178,7 @@ const IndexPage = () => {
         url: '/api/pdf/generate',
         method: 'POST',
         data: {
-          images: images,
+          images: images.map(img => img.url),
           fileName: pdfFileName || undefined,
         },
       });
@@ -267,7 +279,7 @@ const IndexPage = () => {
             <View className="flex-1 overflow-y-auto">
               {images.length > 0 ? (
                 <View className="flex flex-col gap-3">
-                  {images.map((url, index) => (
+                  {images.map((image, index) => (
                     <View
                       key={index}
                       className="flex flex-row items-center gap-3 bg-neutral-50 rounded-lg p-3"
@@ -281,15 +293,15 @@ const IndexPage = () => {
 
                       {/* 缩略图 */}
                       <Image
-                        src={url}
+                        src={image.url}
                         className="w-16 h-16 rounded-lg object-cover"
                         mode="aspectFill"
                       />
 
                       {/* 图片信息 */}
                       <View className="flex-1 flex flex-col">
-                        <Text className="block text-sm font-medium text-neutral-900">
-                          图片 {index + 1}
+                        <Text className="block text-sm font-medium text-neutral-900 truncate">
+                          {image.fileName}
                         </Text>
                         <Text className="block text-xs text-neutral-500 mt-1">
                           点击删除按钮可移除
