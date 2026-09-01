@@ -253,19 +253,19 @@ const IndexPage = () => {
   };
 
   return (
-    <View className="w-full min-h-full bg-neutral-50 flex flex-col">
+    <View className="w-full h-full bg-neutral-50 flex flex-col">
       {/* 内容区域 */}
-      <View className="flex-1 px-4 py-6">
-        {/* 已选图片列表 */}
+      <View className="flex-1 flex flex-col px-4 py-6 overflow-hidden">
+        {/* 已选图片列表 - 占据剩余空间 */}
         {images.length > 0 && (
-          <Card className="mb-4">
-            <CardContent className="p-4">
+          <Card className="flex-1 mb-4 overflow-hidden">
+            <CardContent className="p-4 h-full flex flex-col">
               <Text className="block text-lg font-semibold text-neutral-900 mb-4">
                 已选图片（{images.length}张）
               </Text>
 
-              {/* 固定高度的滚动区域 */}
-              <View className="max-h-80 overflow-y-auto">
+              {/* 可滚动的图片列表 */}
+              <View className="flex-1 overflow-y-auto">
                 <View className="flex flex-col gap-3">
                   {images.map((url, index) => (
                     <View
@@ -313,68 +313,71 @@ const IndexPage = () => {
           </Card>
         )}
 
-        {/* 上传进度条 */}
-        {uploading && (
-          <Card className="mb-4">
+        {/* 底部固定区域 */}
+        <View className="flex flex-col gap-4">
+          {/* 上传进度条 */}
+          {uploading && (
+            <Card>
+              <CardContent className="p-4">
+                <Progress value={uploadProgress} className="w-full" />
+                <Text className="block text-sm text-neutral-500 text-center mt-2">
+                  上传中 {uploadProgress}%
+                </Text>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* PDF 文件名输入框 */}
+          <Card>
             <CardContent className="p-4">
-              <Progress value={uploadProgress} className="w-full" />
-              <Text className="block text-sm text-neutral-500 text-center mt-2">
-                上传中 {uploadProgress}%
+              <Text className="block text-sm font-medium text-neutral-700 mb-2">
+                PDF 文件名（可选）
               </Text>
+              <View className="bg-neutral-50 rounded-lg px-4 py-3">
+                <Input
+                  className="w-full bg-transparent"
+                  placeholder="请输入 PDF 文件名（不填则自动生成）"
+                  value={pdfFileName}
+                  onInput={(e) => setPdfFileName(e.detail.value)}
+                />
+              </View>
             </CardContent>
           </Card>
-        )}
 
-        {/* PDF 文件名输入框 */}
-        <Card className="mb-4">
-          <CardContent className="p-4">
-            <Text className="block text-sm font-medium text-neutral-700 mb-2">
-              PDF 文件名（可选）
-            </Text>
-            <View className="bg-neutral-50 rounded-lg px-4 py-3">
-              <Input
-                className="w-full bg-transparent"
-                placeholder="请输入 PDF 文件名（不填则自动生成）"
-                value={pdfFileName}
-                onInput={(e) => setPdfFileName(e.detail.value)}
-              />
-            </View>
-          </CardContent>
-        </Card>
+          {/* 添加图片按钮 */}
+          <Card>
+            <CardContent className="p-4">
+              <Button
+                onClick={handleChooseImage}
+                disabled={uploading || converting}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <View className="flex flex-row items-center justify-center gap-2">
+                  <Plus size={20} color="#ffffff" />
+                  <Text className="text-white font-medium">添加图片</Text>
+                </View>
+              </Button>
+            </CardContent>
+          </Card>
 
-        {/* 添加图片按钮 */}
-        <Card className="mb-4">
-          <CardContent className="p-4">
-            <Button
-              onClick={handleChooseImage}
-              disabled={uploading || converting}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <View className="flex flex-row items-center justify-center gap-2">
-                <Plus size={20} color="#ffffff" />
-                <Text className="text-white font-medium">添加图片</Text>
-              </View>
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* 转换按钮 */}
-        <Card>
-          <CardContent className="p-4">
-            <Button
-              onClick={handleConvertToPdf}
-              disabled={uploading || converting || images.length === 0}
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
-            >
-              <View className="flex flex-row items-center justify-center gap-2">
-                <FileDown size={20} color="#ffffff" />
-                <Text className="text-white font-medium">
-                  {converting ? '正在转换...' : '转换并下载 PDF'}
-                </Text>
-              </View>
-            </Button>
-          </CardContent>
-        </Card>
+          {/* 转换按钮 */}
+          <Card>
+            <CardContent className="p-4">
+              <Button
+                onClick={handleConvertToPdf}
+                disabled={uploading || converting || images.length === 0}
+                className="w-full bg-green-600 hover:bg-green-700 text-white"
+              >
+                <View className="flex flex-row items-center justify-center gap-2">
+                  <FileDown size={20} color="#ffffff" />
+                  <Text className="text-white font-medium">
+                    {converting ? '正在转换...' : '转换并下载 PDF'}
+                  </Text>
+                </View>
+              </Button>
+            </CardContent>
+          </Card>
+        </View>
       </View>
     </View>
   );
