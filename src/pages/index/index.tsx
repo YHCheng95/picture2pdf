@@ -323,9 +323,6 @@ const IndexPage = () => {
               ) : (
                 /* 空状态提示 */
                 <View className="flex-1 flex flex-col items-center justify-center py-16">
-                  <View className="w-20 h-20 rounded-full bg-neutral-200 flex items-center justify-center mb-4">
-                    <Plus size={40} color="#737373" />
-                  </View>
                   <Text className="block text-base text-neutral-500 text-center">
                     点击下方按钮添加图片
                   </Text>
