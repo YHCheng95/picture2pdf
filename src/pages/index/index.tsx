@@ -256,16 +256,16 @@ const IndexPage = () => {
     <View className="w-full h-full bg-neutral-50 flex flex-col">
       {/* 内容区域 */}
       <View className="flex-1 flex flex-col px-4 py-6 overflow-hidden">
-        {/* 已选图片列表 - 占据剩余空间 */}
-        {images.length > 0 && (
-          <Card className="flex-1 mb-4 overflow-hidden">
-            <CardContent className="p-4 h-full flex flex-col">
-              <Text className="block text-lg font-semibold text-neutral-900 mb-4">
-                已选图片（{images.length}张）
-              </Text>
+        {/* 已选图片列表 - 始终显示，占据剩余空间 */}
+        <Card className="flex-1 mb-4 overflow-hidden">
+          <CardContent className="p-4 h-full flex flex-col">
+            <Text className="block text-lg font-semibold text-neutral-900 mb-4">
+              已选图片（{images.length}张）
+            </Text>
 
-              {/* 可滚动的图片列表 */}
-              <View className="flex-1 overflow-y-auto">
+            {/* 可滚动的图片列表 */}
+            <View className="flex-1 overflow-y-auto">
+              {images.length > 0 ? (
                 <View className="flex flex-col gap-3">
                   {images.map((url, index) => (
                     <View
@@ -308,10 +308,20 @@ const IndexPage = () => {
                     </View>
                   ))}
                 </View>
-              </View>
-            </CardContent>
-          </Card>
-        )}
+              ) : (
+                /* 空状态提示 */
+                <View className="flex-1 flex flex-col items-center justify-center py-16">
+                  <View className="w-20 h-20 rounded-full bg-neutral-200 flex items-center justify-center mb-4">
+                    <Plus size={40} color="#737373" />
+                  </View>
+                  <Text className="block text-base text-neutral-500 text-center">
+                    点击下方按钮添加图片
+                  </Text>
+                </View>
+              )}
+            </View>
+          </CardContent>
+        </Card>
 
         {/* 底部固定区域 */}
         <View className="flex flex-col gap-4">
