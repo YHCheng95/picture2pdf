@@ -276,53 +276,55 @@ const IndexPage = () => {
             </Text>
 
             {/* 可滚动的图片列表 */}
-            <View className="flex-1 overflow-y-auto">
+            <View className="flex-1 relative">
               {images.length > 0 ? (
-                <View className="flex flex-col gap-3">
-                  {images.map((image, index) => (
-                    <View
-                      key={index}
-                      className="flex flex-row items-center gap-3 bg-neutral-50 rounded-lg p-3"
-                    >
-                      {/* 序号 */}
-                      <View className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
-                        <Text className="text-white text-sm font-medium">
-                          {index + 1}
-                        </Text>
-                      </View>
-
-                      {/* 缩略图 */}
-                      <Image
-                        src={image.url}
-                        className="w-16 h-16 rounded-lg object-cover"
-                        mode="aspectFill"
-                      />
-
-                      {/* 图片信息 - 固定宽度，防止挤压其他元素 */}
-                      <View className="w-32 flex flex-col min-w-0">
-                        <Text className="block text-sm font-medium text-neutral-900 truncate">
-                          {image.fileName}
-                        </Text>
-                        <Text className="block text-xs text-neutral-500 mt-1 truncate">
-                          点击删除按钮可移除
-                        </Text>
-                      </View>
-
-                      {/* 删除按钮 */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteImage(index)}
-                        className="text-red-500 hover:text-red-600"
+                <View className="h-full overflow-y-auto">
+                  <View className="flex flex-col gap-3">
+                    {images.map((image, index) => (
+                      <View
+                        key={index}
+                        className="flex flex-row items-center gap-3 bg-neutral-50 rounded-lg p-3"
                       >
-                        <Trash2 size={20} color="#ef4444" />
-                      </Button>
-                    </View>
-                  ))}
+                        {/* 序号 */}
+                        <View className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
+                          <Text className="text-white text-sm font-medium">
+                            {index + 1}
+                          </Text>
+                        </View>
+
+                        {/* 缩略图 */}
+                        <Image
+                          src={image.url}
+                          className="w-16 h-16 rounded-lg object-cover"
+                          mode="aspectFill"
+                        />
+
+                        {/* 图片信息 - 固定宽度，防止挤压其他元素 */}
+                        <View className="w-32 flex flex-col min-w-0">
+                          <Text className="block text-sm font-medium text-neutral-900 truncate">
+                            {image.fileName}
+                          </Text>
+                          <Text className="block text-xs text-neutral-500 mt-1 truncate">
+                            点击删除按钮可移除
+                          </Text>
+                        </View>
+
+                        {/* 删除按钮 */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteImage(index)}
+                          className="text-red-500 hover:text-red-600"
+                        >
+                          <Trash2 size={20} color="#ef4444" />
+                        </Button>
+                      </View>
+                    ))}
+                  </View>
                 </View>
               ) : (
-                /* 空状态提示 - 居中显示 */
-                <View className="flex-1 flex items-center justify-center">
+                /* 空状态提示 - 绝对定位居中 */
+                <View className="absolute inset-0 flex items-center justify-center">
                   <Text className="block text-base text-neutral-500 text-center">
                     点击下方按钮添加图片
                   </Text>
