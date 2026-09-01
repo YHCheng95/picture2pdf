@@ -5,7 +5,7 @@ export default defineAppConfig({
   window: {
     backgroundTextStyle: 'light',
     navigationBarBackgroundColor: '#fff',
-    navigationBarTitleText: 'WeChat',
+    navigationBarTitleText: '图片转PDF工具',
     navigationBarTextStyle: 'black'
   }
 })
