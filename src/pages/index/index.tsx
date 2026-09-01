@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Network } from '@/network';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Trash2, Plus, FileDown } from 'lucide-react-taro';
 
@@ -15,6 +16,7 @@ const IndexPage = () => {
   const [uploading, setUploading] = useState(false);
   const [converting, setConverting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [pdfFileName, setPdfFileName] = useState('');
 
   // 选择图片
   const handleChooseImage = async () => {
@@ -165,6 +167,7 @@ const IndexPage = () => {
         method: 'POST',
         data: {
           images: images,
+          fileName: pdfFileName || undefined,
         },
       });
 
@@ -247,47 +250,11 @@ const IndexPage = () => {
 
   return (
     <View className="w-full min-h-full bg-neutral-50 flex flex-col">
-      {/* 顶部标题栏 */}
-      <View className="bg-white px-4 py-6 border-b border-neutral-200">
-        <Text className="block text-2xl font-bold text-neutral-900 text-center">
-          图片转 PDF 工具
-        </Text>
-        <Text className="block text-sm text-neutral-500 text-center mt-2">
-          上传多张图片，一键生成 PDF 文档
-        </Text>
-      </View>
-
       {/* 内容区域 */}
       <View className="flex-1 px-4 py-6">
-        {/* 添加图片按钮 */}
-        <Card className="mb-6">
-          <CardContent className="p-4">
-            <Button
-              onClick={handleChooseImage}
-              disabled={uploading || converting}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <View className="flex flex-row items-center justify-center gap-2">
-                <Plus size={20} color="#ffffff" />
-                <Text className="text-white font-medium">添加图片</Text>
-              </View>
-            </Button>
-
-            {/* 上传进度条 */}
-            {uploading && (
-              <View className="mt-4">
-                <Progress value={uploadProgress} className="w-full" />
-                <Text className="block text-sm text-neutral-500 text-center mt-2">
-                  上传中 {uploadProgress}%
-                </Text>
-              </View>
-            )}
-          </CardContent>
-        </Card>
-
         {/* 已选图片列表 */}
         {images.length > 0 && (
-          <Card className="mb-6">
+          <Card className="mb-4">
             <CardContent className="p-4">
               <Text className="block text-lg font-semibold text-neutral-900 mb-4">
                 已选图片（{images.length}张）
@@ -339,17 +306,50 @@ const IndexPage = () => {
           </Card>
         )}
 
-        {/* 空状态提示 */}
-        {images.length === 0 && !uploading && (
-          <View className="flex flex-col items-center justify-center py-16">
-            <View className="w-20 h-20 rounded-full bg-neutral-200 flex items-center justify-center mb-4">
-              <Plus size={40} color="#737373" />
-            </View>
-            <Text className="block text-base text-neutral-500 text-center">
-              点击上方按钮添加图片
-            </Text>
-          </View>
+        {/* 上传进度条 */}
+        {uploading && (
+          <Card className="mb-4">
+            <CardContent className="p-4">
+              <Progress value={uploadProgress} className="w-full" />
+              <Text className="block text-sm text-neutral-500 text-center mt-2">
+                上传中 {uploadProgress}%
+              </Text>
+            </CardContent>
+          </Card>
         )}
+
+        {/* PDF 文件名输入框 */}
+        <Card className="mb-4">
+          <CardContent className="p-4">
+            <Text className="block text-sm font-medium text-neutral-700 mb-2">
+              PDF 文件名（可选）
+            </Text>
+            <View className="bg-neutral-50 rounded-lg px-4 py-3">
+              <Input
+                className="w-full bg-transparent"
+                placeholder="请输入 PDF 文件名（不填则自动生成）"
+                value={pdfFileName}
+                onInput={(e) => setPdfFileName(e.detail.value)}
+              />
+            </View>
+          </CardContent>
+        </Card>
+
+        {/* 添加图片按钮 */}
+        <Card className="mb-4">
+          <CardContent className="p-4">
+            <Button
+              onClick={handleChooseImage}
+              disabled={uploading || converting}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <View className="flex flex-row items-center justify-center gap-2">
+                <Plus size={20} color="#ffffff" />
+                <Text className="text-white font-medium">添加图片</Text>
+              </View>
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* 转换按钮 */}
         {images.length > 0 && (

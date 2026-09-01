@@ -18,7 +18,7 @@ export class PdfService {
     });
   }
 
-  async generatePdf(imageUrls: string[]) {
+  async generatePdf(imageUrls: string[], customFileName?: string) {
     // 创建 PDF 文档
     const pdfDoc = await PDFDocument.create();
 
@@ -86,7 +86,11 @@ export class PdfService {
 
     // 上传 PDF 到对象存储
     const timestamp = Date.now();
-    const fileName = `pdfs/${timestamp}_images.pdf`;
+    // 使用自定义文件名或自动生成
+    const safeFileName = customFileName
+      ? customFileName.replace(/[^\w\u4e00-\u9fa5-]/g, '_').substring(0, 50)
+      : `images_${timestamp}`;
+    const fileName = `pdfs/${timestamp}_${safeFileName}.pdf`;
 
     const fileKey = await this.storage.uploadFile({
       fileContent: pdfBuffer,
