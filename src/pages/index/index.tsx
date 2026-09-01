@@ -321,8 +321,8 @@ const IndexPage = () => {
                   ))}
                 </View>
               ) : (
-                /* 空状态提示 */
-                <View className="flex-1 flex flex-col items-center justify-center py-16">
+                /* 空状态提示 - 居中显示 */
+                <View className="flex-1 flex items-center justify-center">
                   <Text className="block text-base text-neutral-500 text-center">
                     点击下方按钮添加图片
                   </Text>
