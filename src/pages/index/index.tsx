@@ -1,37 +1,30 @@
 import { View, Text, Image, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useState } from 'react';
-import { Network } from '@/network';
+import { PDFDocument, PageSizes } from 'pdf-lib';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Progress } from '@/components/ui/progress';
 import { Trash2, Plus, FileDown } from 'lucide-react-taro';
 
 /**
- * 图片转 PDF 工具首页
+ * 图片转 PDF 工具首页 - 纯本地版本
  */
 const IndexPage = () => {
-  const [images, setImages] = useState<{ url: string; fileName: string }[]>([]);
-  const [uploading, setUploading] = useState(false);
+  const [images, setImages] = useState<{ path: string; fileName: string }[]>([]);
   const [converting, setConverting] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [pdfFileName, setPdfFileName] = useState('');
 
   // 选择图片
   const handleChooseImage = async () => {
     try {
       const res = await Taro.chooseImage({
-        count: 9, // 最多选择9张
-        sizeType: ['compressed'], // 压缩图
-        sourceType: ['album', 'camera'], // 相册或相机
+        count: 9,
+        sizeType: ['compressed'],
+        sourceType: ['album', 'camera'],
       });
 
-      setUploading(true);
-      setUploadProgress(0);
-
-      const uploadedImages: { url: string; fileName: string }[] = [];
-      const totalFiles = res.tempFilePaths.length;
+      const newImages: { path: string; fileName: string }[] = [];
 
       // 检测平台
       const isH5 = Taro.getEnv() === Taro.ENV_TYPE.WEB;
@@ -39,116 +32,42 @@ const IndexPage = () => {
       console.log('平台检测:', isH5 ? 'H5' : '小程序');
       console.log('选择的图片:', res);
 
-      // 逐个上传图片
       for (let i = 0; i < res.tempFilePaths.length; i++) {
-        try {
-          let imageUrl: string | null = null;
-          let fileName = `图片${i + 1}`;
+        const filePath = res.tempFilePaths[i];
+        let fileName = `图片${i + 1}`;
 
-          if (isH5) {
-            // H5 端：直接使用 fetch 上传
-            // H5 端的 tempFiles 包含 File 对象
-            const file = res.tempFiles?.[i];
-            console.log('H5 文件对象:', file);
-
-            if (file) {
-              // 获取文件名
-              const fileObj = (file as any).originalFileObj || file;
-              if (fileObj && fileObj.name) {
-                fileName = fileObj.name;
-              }
-
-              // 创建 FormData
-              const formData = new FormData();
-              formData.append('file', fileObj);
-
-              // 使用 fetch 上传
-              const response = await fetch(`${PROJECT_DOMAIN}/api/images/upload`, {
-                method: 'POST',
-                body: formData,
-              });
-
-              console.log('H5 上传响应:', response.status);
-
-              if (response.ok) {
-                const result = await response.json();
-                console.log('H5 上传结果:', result);
-
-                if (result.code === 200 && result.data?.url) {
-                  imageUrl = result.data.url;
-                }
-              } else {
-                throw new Error(`上传失败: ${response.status}`);
-              }
-            }
-          } else {
-            // 小程序端：使用 Network.uploadFile
-            // 从 tempFilePaths 提取文件名
-            const filePath = res.tempFilePaths[i];
-            const fileNameMatch = filePath.match(/[^/\\]+$/);
-            if (fileNameMatch) {
-              fileName = fileNameMatch[0];
-            }
-
-            const uploadRes = await Network.uploadFile({
-              url: '/api/images/upload',
-              filePath: filePath,
-              name: 'file',
-            });
-
-            console.log('小程序上传结果:', uploadRes);
-
-            // 解析响应数据
-            const data = uploadRes.data as any;
-            if (typeof data === 'string') {
-              const parsed = JSON.parse(data);
-              if (parsed.code === 200 && parsed.data?.url) {
-                imageUrl = parsed.data.url;
-              }
-            } else if (data && data.code === 200 && data.data?.url) {
-              imageUrl = data.data.url;
+        if (isH5) {
+          // H5 端：从 File 对象获取文件名
+          const file = res.tempFiles?.[i];
+          if (file) {
+            const fileObj = (file as any).originalFileObj || file;
+            if (fileObj && fileObj.name) {
+              fileName = fileObj.name;
             }
           }
-
-          if (imageUrl) {
-            uploadedImages.push({ url: imageUrl, fileName });
-          } else {
-            console.error('上传成功但未获取到 URL');
+        } else {
+          // 小程序端：从路径提取文件名
+          const fileNameMatch = filePath.match(/[^/\\]+$/);
+          if (fileNameMatch) {
+            fileName = fileNameMatch[0];
           }
-
-          // 更新进度
-          setUploadProgress(Math.round(((i + 1) / totalFiles) * 100));
-        } catch (err) {
-          console.error('上传失败:', err);
-          Taro.showToast({
-            title: `第 ${i + 1} 张图片上传失败`,
-            icon: 'none',
-          });
         }
+
+        newImages.push({ path: filePath, fileName });
       }
 
       // 更新图片列表
-      if (uploadedImages.length > 0) {
-        setImages([...images, ...uploadedImages]);
-        Taro.showToast({
-          title: `成功上传 ${uploadedImages.length} 张图片`,
-          icon: 'success',
-        });
-      } else {
-        Taro.showToast({
-          title: '所有图片上传失败',
-          icon: 'none',
-        });
-      }
+      setImages([...images, ...newImages]);
+      Taro.showToast({
+        title: `已添加 ${newImages.length} 张图片`,
+        icon: 'success',
+      });
     } catch (err) {
       console.error('选择图片失败:', err);
       Taro.showToast({
         title: '选择图片失败',
         icon: 'none',
       });
-    } finally {
-      setUploading(false);
-      setUploadProgress(0);
     }
   };
 
@@ -159,11 +78,44 @@ const IndexPage = () => {
     setImages(newImages);
   };
 
-  // 转换并下载 PDF
+  // 将图片转换为 ArrayBuffer
+  const imageToBytes = async (imagePath: string): Promise<Uint8Array> => {
+    const isH5 = Taro.getEnv() === Taro.ENV_TYPE.WEB;
+
+    if (isH5) {
+      // H5 端：使用 fetch 读取本地文件
+      const response = await fetch(imagePath);
+      const blob = await response.blob();
+      const arrayBuffer = await blob.arrayBuffer();
+      return new Uint8Array(arrayBuffer);
+    } else {
+      // 小程序端：使用 Taro.getFileSystemManager
+      return new Promise((resolve, reject) => {
+        Taro.getFileSystemManager().readFile({
+          filePath: imagePath,
+          success: (res) => {
+            const data = res.data;
+            if (typeof data === 'string') {
+              // 如果是字符串，转换为 Uint8Array
+              const encoder = new TextEncoder();
+              resolve(new Uint8Array(encoder.encode(data)));
+            } else {
+              resolve(new Uint8Array(data as ArrayBuffer));
+            }
+          },
+          fail: (err) => {
+            reject(err);
+          },
+        });
+      });
+    }
+  };
+
+  // 转换并保存 PDF（纯本地）
   const handleConvertToPdf = async () => {
     if (images.length === 0) {
       Taro.showToast({
-        title: '请先上传图片',
+        title: '请先添加图片',
         icon: 'none',
       });
       return;
@@ -173,89 +125,126 @@ const IndexPage = () => {
       setConverting(true);
       Taro.showLoading({ title: '正在生成PDF...' });
 
-      // 调用后端接口生成 PDF
-      const res = await Network.request({
-        url: '/api/pdf/generate',
-        method: 'POST',
-        data: {
-          images: images.map(img => img.url),
-          fileName: pdfFileName || undefined,
-        },
-      });
+      // 创建 PDF 文档
+      const pdfDoc = await PDFDocument.create();
 
-      console.log('PDF生成结果:', res.data);
+      // 逐张图片处理
+      for (let i = 0; i < images.length; i++) {
+        const image = images[i];
+        Taro.showLoading({ title: `处理第 ${i + 1}/${images.length} 张图片...` });
 
-      // 解析响应
-      const data = res.data as any;
-      if (data && data.code === 200 && data.data?.downloadUrl) {
-        const downloadUrl = data.data.downloadUrl;
+        try {
+          // 读取图片数据
+          const imageBytes = await imageToBytes(image.path);
 
-        // 检测平台
-        const isH5 = Taro.getEnv() === Taro.ENV_TYPE.WEB;
-
-        if (isH5) {
-          // H5 端：使用 fetch + blob 下载
-          Taro.showLoading({ title: '正在下载PDF...' });
+          // 根据文件扩展名判断图片类型
+          const isPng = image.fileName.toLowerCase().endsWith('.png');
           
-          try {
-            const response = await fetch(downloadUrl);
-            if (!response.ok) {
-              throw new Error('下载失败');
-            }
-            
-            const blob = await response.blob();
-            const blobUrl = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            // 使用用户输入的文件名或自动生成
-            const downloadFileName = pdfFileName
-              ? `${pdfFileName.replace(/[^\w\u4e00-\u9fa5-]/g, '_')}.pdf`
-              : `images_${Date.now()}.pdf`;
-            link.download = downloadFileName;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(blobUrl);
-            
-            Taro.showToast({
-              title: 'PDF下载成功',
-              icon: 'success',
-            });
-          } catch (err) {
-            console.error('H5 下载失败:', err);
-            throw new Error('下载失败，请重试');
-          }
-        } else {
-          // 小程序端：使用 Network.downloadFile
-          Taro.showLoading({ title: '正在下载PDF...' });
-          const downloadRes = await Network.downloadFile({
-            url: downloadUrl,
-          });
-
-          if (downloadRes.statusCode === 200) {
-            const filePath = downloadRes.tempFilePath;
-
-            // 打开文档
-            await Taro.openDocument({
-              filePath: filePath,
-              fileType: 'pdf',
-            });
-            
-            Taro.showToast({
-              title: 'PDF已下载',
-              icon: 'success',
-            });
+          // 嵌入图片到 PDF
+          let embeddedImage;
+          if (isPng) {
+            embeddedImage = await pdfDoc.embedPng(imageBytes);
           } else {
-            throw new Error('下载失败');
+            embeddedImage = await pdfDoc.embedJpg(imageBytes);
           }
+
+          // 获取图片尺寸
+          const imgWidth = embeddedImage.width;
+          const imgHeight = embeddedImage.height;
+
+          // 使用 A4 页面尺寸
+          const [pageWidth, pageHeight] = PageSizes.A4;
+
+          // 添加新页面
+          const page = pdfDoc.addPage([pageWidth, pageHeight]);
+
+          // 计算缩放比例，使图片完整显示在页面内
+          const scaleX = pageWidth / imgWidth;
+          const scaleY = pageHeight / imgHeight;
+          const scale = Math.min(scaleX, scaleY) * 0.9; // 留出 10% 边距
+
+          const scaledWidth = imgWidth * scale;
+          const scaledHeight = imgHeight * scale;
+
+          // 计算居中位置
+          const x = (pageWidth - scaledWidth) / 2;
+          const y = (pageHeight - scaledHeight) / 2;
+
+          // 绘制图片
+          page.drawImage(embeddedImage, {
+            x,
+            y,
+            width: scaledWidth,
+            height: scaledHeight,
+          });
+        } catch (err) {
+          console.error(`处理第 ${i + 1} 张图片失败:`, err);
+          Taro.showToast({
+            title: `第 ${i + 1} 张图片处理失败`,
+            icon: 'none',
+          });
         }
+      }
+
+      // 保存 PDF
+      Taro.showLoading({ title: '正在保存PDF...' });
+      const pdfBytes = await pdfDoc.save();
+
+      // 检测平台
+      const isH5 = Taro.getEnv() === Taro.ENV_TYPE.WEB;
+
+      if (isH5) {
+        // H5 端：使用 blob 下载
+        const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+        const blobUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        
+        // 使用用户输入的文件名或自动生成
+        const downloadFileName = pdfFileName
+          ? `${pdfFileName.replace(/[^\w\u4e00-\u9fa5-]/g, '_')}.pdf`
+          : `images_${Date.now()}.pdf`;
+        link.download = downloadFileName;
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+
+        Taro.showToast({
+          title: 'PDF已保存',
+          icon: 'success',
+        });
       } else {
-        throw new Error(data?.msg || 'PDF生成失败');
+        // 小程序端：保存到临时文件
+        const filePath = `${Taro.env.USER_DATA_PATH}/${pdfFileName || `images_${Date.now()}`}.pdf`;
+        
+        await new Promise<void>((resolve, reject) => {
+          Taro.getFileSystemManager().writeFile({
+            filePath,
+            data: pdfBytes.buffer as ArrayBuffer,
+            encoding: 'binary',
+            success: () => resolve(),
+            fail: (err) => reject(err),
+          });
+        });
+
+        // 打开 PDF 文档
+        await Taro.openDocument({
+          filePath,
+          fileType: 'pdf',
+          showMenu: true, // 显示菜单，可以分享、保存等
+        });
+
+        Taro.showToast({
+          title: 'PDF已生成',
+          icon: 'success',
+        });
       }
     } catch (err) {
       console.error('PDF转换失败:', err);
       Taro.showToast({
-        title: err.message || 'PDF转换失败',
+        title: 'PDF转换失败',
         icon: 'none',
       });
     } finally {
@@ -294,12 +283,12 @@ const IndexPage = () => {
 
                         {/* 缩略图 */}
                         <Image
-                          src={image.url}
+                          src={image.path}
                           className="w-16 h-16 rounded-lg object-cover"
                           mode="aspectFill"
                         />
 
-                        {/* 图片信息 - 固定宽度，防止挤压其他元素 */}
+                        {/* 图片信息 - 固定宽度 */}
                         <View className="w-32 flex flex-col min-w-0">
                           <Text className="block text-sm font-medium text-neutral-900 truncate">
                             {image.fileName}
@@ -323,7 +312,7 @@ const IndexPage = () => {
                   </View>
                 </ScrollView>
               ) : (
-                /* 空状态提示 - 绝对定位居中 */
+                /* 空状态提示 */
                 <View className="absolute inset-0 flex items-center justify-center">
                   <Text className="block text-base text-neutral-500 text-center">
                     点击下方按钮添加图片
@@ -336,18 +325,6 @@ const IndexPage = () => {
 
         {/* 底部固定区域 */}
         <View className="flex flex-col gap-4">
-          {/* 上传进度条 */}
-          {uploading && (
-            <Card>
-              <CardContent className="p-4">
-                <Progress value={uploadProgress} className="w-full" />
-                <Text className="block text-sm text-neutral-500 text-center mt-2">
-                  上传中 {uploadProgress}%
-                </Text>
-              </CardContent>
-            </Card>
-          )}
-
           {/* PDF 文件名输入框 */}
           <Card>
             <CardContent className="p-4">
@@ -370,7 +347,7 @@ const IndexPage = () => {
             <CardContent className="p-4">
               <Button
                 onClick={handleChooseImage}
-                disabled={uploading || converting}
+                disabled={converting}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <View className="flex flex-row items-center justify-center gap-2">
@@ -386,13 +363,13 @@ const IndexPage = () => {
             <CardContent className="p-4">
               <Button
                 onClick={handleConvertToPdf}
-                disabled={uploading || converting || images.length === 0}
+                disabled={converting || images.length === 0}
                 className="w-full bg-green-600 hover:bg-green-700 text-white"
               >
                 <View className="flex flex-row items-center justify-center gap-2">
                   <FileDown size={20} color="#ffffff" />
                   <Text className="text-white font-medium">
-                    {converting ? '正在转换...' : '转换并下载 PDF'}
+                    {converting ? '正在转换...' : '生成 PDF'}
                   </Text>
                 </View>
               </Button>
