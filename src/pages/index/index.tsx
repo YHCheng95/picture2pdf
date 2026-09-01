@@ -2,6 +2,8 @@ import { View, Text, Image, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useState } from 'react';
 import { PDFDocument, PageSizes } from 'pdf-lib';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -190,31 +192,80 @@ const IndexPage = () => {
       Taro.showLoading({ title: '正在保存PDF...' });
       const pdfBytes = await pdfDoc.save();
 
+      // 生成文件名
+      const downloadFileName = pdfFileName
+        ? `${pdfFileName.replace(/[^\w\u4e00-\u9fa5-]/g, '_')}.pdf`
+        : `images_${Date.now()}.pdf`;
+
       // 检测平台
       const isH5 = Taro.getEnv() === Taro.ENV_TYPE.WEB;
 
       if (isH5) {
-        // H5 端：使用 blob 下载
-        const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
-        const blobUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        
-        // 使用用户输入的文件名或自动生成
-        const downloadFileName = pdfFileName
-          ? `${pdfFileName.replace(/[^\w\u4e00-\u9fa5-]/g, '_')}.pdf`
-          : `images_${Date.now()}.pdf`;
-        link.download = downloadFileName;
-        
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(blobUrl);
+        // H5/APP 端：使用 Capacitor Filesystem 保存
+        try {
+          // 将 PDF 转换为 base64
+          const base64Data = btoa(
+            new Uint8Array(pdfBytes.buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+          );
 
-        Taro.showToast({
-          title: 'PDF已保存',
-          icon: 'success',
-        });
+          // 保存到设备
+          const result = await Filesystem.writeFile({
+            path: downloadFileName,
+            data: base64Data,
+            directory: Directory.Documents,
+            recursive: true,
+          });
+
+          console.log('PDF保存成功:', result);
+
+          // 显示成功提示，并提供分享选项
+          Taro.showModal({
+            title: 'PDF已生成',
+            content: `文件已保存到：\n${downloadFileName}\n\n是否要分享或查看文件？`,
+            confirmText: '分享文件',
+            cancelText: '关闭',
+            success: async (modalRes) => {
+              if (modalRes.confirm) {
+                // 分享文件
+                try {
+                  await Share.share({
+                    title: '分享PDF文件',
+                    text: '这是我生成的PDF文件',
+                    url: result.uri,
+                    dialogTitle: '分享PDF',
+                  });
+                } catch (shareErr) {
+                  console.error('分享失败:', shareErr);
+                  Taro.showToast({
+                    title: '分享失败，请在文件管理器中查找',
+                    icon: 'none',
+                    duration: 3000,
+                  });
+                }
+              }
+            },
+          });
+        } catch (fsErr) {
+          console.error('Filesystem保存失败，尝试使用下载方式:', fsErr);
+          
+          // 降级方案：使用 blob 下载
+          const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+          const blobUrl = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = downloadFileName;
+          
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(blobUrl);
+
+          Taro.showToast({
+            title: 'PDF已下载到浏览器默认目录',
+            icon: 'success',
+            duration: 3000,
+          });
+        }
       } else {
         // 小程序端：保存到临时文件
         const filePath = `${Taro.env.USER_DATA_PATH}/${pdfFileName || `images_${Date.now()}`}.pdf`;
